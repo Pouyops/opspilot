@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 
+from app.routers import tickets
+
 import redis.asyncio as aioredis
 from fastapi import FastAPI
 from sqlalchemy import text
@@ -18,7 +20,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="OpsPilot", lifespan=lifespan)
-
+app.include_router(tickets.router)
 
 @app.get("/health")
 async def health():
