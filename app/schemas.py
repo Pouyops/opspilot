@@ -18,3 +18,16 @@ class TicketRead(BaseModel):
     status: str
     answer: str | None
     created_at: datetime
+
+class DocumentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    source: str | None = Field(default=None, max_length=500)
+    text: str = Field(min_length=1)
+
+
+class DocumentRead(BaseModel):
+    id: int
+    title: str
+    source: str | None
+    created_at: datetime
+    chunk_count: int
