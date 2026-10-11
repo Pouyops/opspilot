@@ -43,7 +43,4 @@ async def search(
             }
         )
 
-    if not results:
-        raise HTTPException(status_code=404, detail="No documents found")
-
     return {"query": q, "count": len(results), "results": results}
