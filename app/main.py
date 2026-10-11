@@ -1,8 +1,6 @@
 from contextlib import asynccontextmanager
 
-from app.routers import documents, tickets
-
-from app.routers import tickets
+from app.routers import documents, search, tickets
 
 import redis.asyncio as aioredis
 from fastapi import FastAPI
@@ -24,6 +22,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="OpsPilot", lifespan=lifespan)
 app.include_router(tickets.router)
 app.include_router(documents.router)
+app.include_router(search.router)
 
 @app.get("/health")
 async def health():
