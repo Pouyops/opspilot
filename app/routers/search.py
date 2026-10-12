@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.search import MIN_RERANK_SCORE, search_chunks
 from app.db import get_session
 from app.models import Document
 from app.search import search_chunks
@@ -13,9 +13,10 @@ router = APIRouter(prefix="/search", tags=["search"])
 async def search(
     q: str = Query(min_length=1),
     limit: int = Query(5, ge=1, le=20),
+    min_score: float = Query(MIN_RERANK_SCORE),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    hits = await search_chunks(q, limit=limit)
+    hits = await search_chunks(q, limit=limit, min_score=min_score)
 
     doc_ids = [hit["document_id"] for hit in hits]
     titles = {}

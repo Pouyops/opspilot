@@ -10,8 +10,9 @@ RRF_K = 60
 CANDIDATES = 50
 RERANK_POOL = 30
 MAX_PER_DOC = 2
+MIN_RERANK_SCORE = 0.0
 
-async def search_chunks(query: str, limit: int = 5) -> list[dict]:
+async def search_chunks(query: str, limit: int = 5, min_score: float = MIN_RERANK_SCORE) -> list[dict]:
     (query_vector,) = await embed_texts([query])
 
     stmt = text(
@@ -72,7 +73,7 @@ async def search_chunks(query: str, limit: int = 5) -> list[dict]:
     for hit, score in zip(hits, scores):
         hit["rerank_score"] = score
     hits.sort(key=lambda h: h["rerank_score"], reverse=True)
-
+    hits = [h for h in hits if h["rerank_score"] >= min_score]
     final: list[dict] = []
     per_doc: dict[int, int] = {}
     for hit in hits:
