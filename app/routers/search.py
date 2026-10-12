@@ -40,6 +40,7 @@ async def search(
                 "score": round(hit["score"], 6),
                 "semantic_score": round(hit["semantic_score"], 6),
                 "keyword_score": round(hit["keyword_score"], 6),
+		"rerank_score": round(hit["rerank_score"],4),
             }
         )
 

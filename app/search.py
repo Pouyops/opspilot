@@ -4,10 +4,12 @@ import re
 
 from app.db import SessionLocal
 from app.embeddings import embed_texts
+from app.reranker import rerank
 
 RRF_K = 60
 CANDIDATES = 50
-
+RERANK_POOL = 30
+MAX_PER_DOC = 2
 
 async def search_chunks(query: str, limit: int = 5) -> list[dict]:
     (query_vector,) = await embed_texts([query])
@@ -47,19 +49,38 @@ async def search_chunks(query: str, limit: int = 5) -> list[dict]:
         "tsq": " | ".join(words),
         "candidates": CANDIDATES,
         "rrf_k": RRF_K,
-        "limit": limit,
+        "limit": max(limit, RERANK_POOL),
     }
 
     async with SessionLocal() as session:
         rows: list[RowMapping] = (await session.execute(stmt, params)).mappings().all()
 
-    return [
-    {
-        "document_id": row["document_id"],
-        "content": row["content"],
-        "semantic_score": float(row["semantic_score"] or 0.0),
-        "keyword_score": float(row["keyword_score"] or 0.0),
-        "score": float(row["score"]),
-    }
-    for row in rows
-]
+    hits = [
+        {
+            "document_id": row["document_id"],
+            "content": row["content"],
+            "semantic_score": float(row["semantic_score"] or 0.0),
+            "keyword_score": float(row["keyword_score"] or 0.0),
+            "score": float(row["score"]),
+        }
+        for row in rows
+    ]
+    if not hits:
+        return []
+
+    scores = await rerank(query, [h["content"] for h in hits])
+    for hit, score in zip(hits, scores):
+        hit["rerank_score"] = score
+    hits.sort(key=lambda h: h["rerank_score"], reverse=True)
+
+    final: list[dict] = []
+    per_doc: dict[int, int] = {}
+    for hit in hits:
+        count = per_doc.get(hit["document_id"], 0)
+        if count >= MAX_PER_DOC:
+            continue
+        per_doc[hit["document_id"]] = count + 1
+        final.append(hit)
+        if len(final) == limit:
+            break
+    return final
