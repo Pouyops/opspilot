@@ -1,5 +1,7 @@
 from sqlalchemy import RowMapping, text
 
+import re
+
 from app.db import SessionLocal
 from app.embeddings import embed_texts
 
@@ -21,10 +23,10 @@ async def search_chunks(query: str, limit: int = 5) -> list[dict]:
         ),
         keyword AS (
             SELECT c.id, c.document_id, c.content,
-                   ROW_NUMBER() OVER (ORDER BY ts_rank(c.tsv, plainto_tsquery('english', :query)) DESC) AS rank
+                   ROW_NUMBER() OVER (ORDER BY ts_rank(c.tsv, to_tsquery('english', :tsq)) DESC) AS rank
             FROM chunks c
-            WHERE c.tsv @@ plainto_tsquery('english', :query)
-            ORDER BY ts_rank(c.tsv, plainto_tsquery('english', :query)) DESC
+            WHERE c.tsv @@ to_tsquery('english', :tsq)
+            ORDER BY ts_rank(c.tsv, to_tsquery('english', :tsq)) DESC
             LIMIT :candidates
         )
         SELECT COALESCE(s.document_id, k.document_id) AS document_id,
@@ -39,9 +41,10 @@ async def search_chunks(query: str, limit: int = 5) -> list[dict]:
         LIMIT :limit
         """
     )
+    words = re.findall(r"\w+", query.lower())
     params = {
         "vector": str(query_vector),
-        "query": query,
+        "tsq": " | ".join(words),
         "candidates": CANDIDATES,
         "rrf_k": RRF_K,
         "limit": limit,

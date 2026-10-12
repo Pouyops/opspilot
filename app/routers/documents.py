@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chunking import chunk_markdown
 from app.chunking import chunk_text
 from app.db import get_session
 from app.embeddings import embed_texts
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 async def ingest_document(
     payload: DocumentCreate, session: AsyncSession = Depends(get_session)
 ):
-    pieces = chunk_text(payload.text)
+    pieces = chunk_markdown(payload.title, payload.text)
     if not pieces:
         raise HTTPException(status_code=422, detail="Document contains no text")
 
